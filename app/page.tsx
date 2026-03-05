@@ -10,7 +10,7 @@ function calculate(){
 
 const lines=text.split("\n");
 
-let pieces=[];
+let pieces:any[]=[];
 
 lines.forEach(l=>{
 
