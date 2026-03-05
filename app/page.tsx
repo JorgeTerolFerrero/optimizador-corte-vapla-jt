@@ -50,7 +50,7 @@ const boards=[
 {w:2020,h:1020}
 ];
 
-let board=null;
+let board:any=null;
 
 boards.forEach(b=>{
 
