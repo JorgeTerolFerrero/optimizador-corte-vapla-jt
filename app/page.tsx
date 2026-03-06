@@ -1,181 +1,179 @@
-"use client";
-import { useState } from "react";
+"use client"
+
+import { useState } from "react"
 
 const BOARDS = [
-  { w: 4050, h: 2050 },
-  { w: 4050, h: 1230 },
-  { w: 2360, h: 1020 },
-  { w: 2020, h: 1020 }
-];
-
-const CUT_COST: Record<number, number> = {
-10:0.0024,12:0.0024,15:0.0024,20:0.0024,
-25:0.0035,30:0.0039,35:0.0039,40:0.0052,
-45:0.0061,50:0.0069,60:0.0078,70:0.0087,
-75:0.0095,80:0.0095,90:0.0100,100:0.0104,
-110:0.0130,120:0.0130,130:0.0130,140:0.0130,150:0.0130
-};
+{ w:4050, h:2050 },
+{ w:4050, h:1230 },
+{ w:2360, h:1020 },
+{ w:2020, h:1020 }
+]
 
 const MATERIAL_PRICE:any = {
-PE_RC:{20:1.70,25:1.70,30:1.70,40:1.70,50:1.70},
-PE500:{natural:{20:2.30,30:2.30,40:2.30}},
-PE1000:{natural:{20:2.60,30:2.60,40:2.60}},
-PP:{natural:{20:2.10,30:2.10,40:2.10}}
-};
+PE_RC:{
+20:1.7,
+40:1.7,
+60:1.7
+}
+}
 
-function parsePieces(text:string){
-  const lines=text.split("\n");
-  let pieces:any[]=[];
-  
-  lines.forEach(l=>{
-    const line=l.trim();
-    if(!line)return;
-
-    let qty=1;
-    let dims=line;
-
-    if(line.includes("-")){
-      const parts=line.split("-");
-      qty=parseInt(parts[0]);
-      dims=parts[1];
-    }
-
-    const p=dims.split("x").map(n=>parseInt(n));
-    if(p.length===3){
-      for(let i=0;i<qty;i++){
-        pieces.push({w:p[0],h:p[1],t:p[2]});
-      }
-    }
-  });
-
-  return pieces;
+const CUT_COST:any={
+10:0.0024,
+12:0.0024,
+15:0.0024,
+20:0.0024,
+25:0.0035,
+30:0.0039,
+35:0.0039,
+40:0.0052,
+45:0.0061,
+50:0.0069,
+60:0.0078,
+70:0.0087,
+75:0.0095,
+80:0.0095,
+90:0.0100,
+100:0.0104,
+110:0.0130,
+120:0.0130,
+130:0.0130,
+140:0.0130,
+150:0.0130
 }
 
 function weight(w:number,h:number,t:number){
-  return (w*h*t)/1000000;
+return (w*h*t)/1000000
+}
+
+function parsePieces(text:string){
+
+const lines=text.split("\n")
+
+let pieces:any[]=[]
+
+lines.forEach(l=>{
+
+l=l.trim()
+
+if(!l) return
+
+let qty=1
+let w=0
+let h=0
+let t=0
+
+if(l.includes("-")){
+const parts=l.split("-")
+qty=parseInt(parts[0])
+l=parts[1]
+}
+
+const dims=l.split("x")
+
+w=parseFloat(dims[0])
+h=parseFloat(dims[1])
+t=parseFloat(dims[2])
+
+for(let i=0;i<qty;i++){
+pieces.push({w,h,t})
+}
+
+})
+
+return pieces
 }
 
 export default function Home(){
 
-const [input,setInput]=useState("");
-const [result,setResult]=useState<any>(null);
-
-const [material,setMaterial]=useState("PE_RC");
-const [color,setColor]=useState("natural");
+const [input,setInput]=useState("")
+const [material,setMaterial]=useState("PE_RC")
+const [result,setResult]=useState<any>(null)
 
 function calculate(){
 
-  const pieces=parsePieces(input);
+const pieces=parsePieces(input)
 
-  if(pieces.length===0)return;
+if(pieces.length===0)return
 
-  const thickness=pieces[0].t;
+const thickness=pieces[0].t
+const piece=pieces[0]
 
-  function calculate(){
+const totalPieces=pieces.length
 
-const pieces=parsePieces(input);
-if(pieces.length===0)return;
+const pieceArea=piece.w*piece.h
+const pieceWeight=weight(piece.w,piece.h,thickness)
 
-const thickness=pieces[0].t;
+const piecesWeightTotal=pieceWeight*totalPieces
 
-let piecesArea=0;
-let piecesWeight=0;
-
-pieces.forEach(p=>{
-  piecesArea+=p.w*p.h;
-  piecesWeight+=weight(p.w,p.h,p.t);
-});
-
-let best=null;
+let best:any=null
 
 BOARDS.forEach(board=>{
 
-  const boardArea=board.w*board.h;
+const boardArea=board.w*board.h
 
-  const piece=pieces[0];
+const fit1=Math.floor(board.w/piece.w)*Math.floor(board.h/piece.h)
+const fit2=Math.floor(board.w/piece.h)*Math.floor(board.h/piece.w)
 
-  const fit1=Math.floor(board.w/piece.w)*Math.floor(board.h/piece.h);
-  const fit2=Math.floor(board.w/piece.h)*Math.floor(board.h/piece.w);
+const piecesPerBoard=Math.max(fit1,fit2)
 
-  const piecesPerBoard=Math.max(fit1,fit2);
+if(piecesPerBoard===0)return
 
-  if(piecesPerBoard===0)return;
+const usedArea=piecesPerBoard*pieceArea
 
-  const boardsNeeded=Math.ceil(pieces.length/piecesPerBoard);
+const wasteArea=boardArea-usedArea
 
-  const totalBoardArea=boardsNeeded*boardArea;
+const wastePercent=(wasteArea/boardArea)*100
 
-  const wasteArea=totalBoardArea-piecesArea;
+const boardsNeeded=Math.ceil(totalPieces/piecesPerBoard)
 
-  const wastePercent=(wasteArea/totalBoardArea)*100;
+const boardWeight=weight(board.w,board.h,thickness)
 
-  const boardWeight=weight(board.w,board.h,thickness);
+const totalBoardWeight=boardWeight*boardsNeeded
 
-  const priceKg=MATERIAL_PRICE.PE_RC[thickness]||1.7;
+let priceKg=1.7
 
-  const materialCost=boardWeight*boardsNeeded*priceKg;
+if(material==="PE_RC"){
+priceKg=MATERIAL_PRICE.PE_RC[thickness]||1.7
+}
 
-  const cutLength=board.h*2+board.w;
-  const cutCost=(cutLength/10)*(CUT_COST[thickness]||0)*boardsNeeded;
+const materialCost=totalBoardWeight*priceKg
 
-  const totalCost=materialCost+cutCost;
+const cutLength=(board.w + board.h*2)/10
 
-  const priceKgPieces=totalCost/piecesWeight;
+const cutCost=cutLength*(CUT_COST[thickness]||0)*boardsNeeded
 
-  const result={
-    board,
-    boardsNeeded,
-    wastePercent,
-    materialCost,
-    cutCost,
-    totalCost,
-    priceKgPieces,
-    piecesWeight,
-    boardWeight
-  };
+const totalCost=materialCost+cutCost
 
-  if(!best||result.wastePercent<best.wastePercent){
-    best=result;
-  }
+const priceKgPieces=totalCost/piecesWeightTotal
 
-});
+const wasteWeight=totalBoardWeight-piecesWeightTotal
 
-setResult(best);
+const resultTemp={
+
+board,
+boardsNeeded,
+piecesPerBoard,
+wastePercent,
+wasteWeight,
+piecesWeightTotal,
+totalBoardWeight,
+materialCost,
+cutCost,
+totalCost,
+priceKgPieces
 
 }
 
-  let piecesWeight=0;
+if(!best ||
+resultTemp.wastePercent < best.wastePercent ||
+(resultTemp.wastePercent === best.wastePercent && resultTemp.materialCost < best.materialCost)
+){
+best=resultTemp
+}
 
-  pieces.forEach(p=>{
-    piecesWeight+=weight(p.w,p.h,p.t);
-  });
+})
 
-  const boardWeight=weight(board.w,board.h,thickness);
-
-  const cutLength=board.h*2+board.w;
-  const cutCost=(cutLength/10)*(CUT_COST[thickness]||0);
-
-  let priceKg=1.7;
-
-  if(material==="PE_RC"){
-    priceKg=MATERIAL_PRICE.PE_RC[thickness]||1.7;
-  }
-
-  const materialCost=boardWeight*priceKg;
-
-  const totalCost=materialCost+cutCost;
-
-  const priceKgPieces=totalCost/piecesWeight;
-
-  setResult({
-    piecesWeight,
-    boardWeight,
-    materialCost,
-    cutCost,
-    totalCost,
-    priceKgPieces,
-    board
-  });
+setResult(best)
 
 }
 
@@ -187,63 +185,54 @@ return(
 
 <h2>Configuración</h2>
 
-<div style={{display:"flex",gap:20}}>
+<p>Material</p>
 
-<div>
-Material<br/>
 <select value={material} onChange={e=>setMaterial(e.target.value)}>
 <option value="PE_RC">PE RC</option>
-<option value="PE500">PE 500</option>
-<option value="PE1000">PE 1000</option>
-<option value="PP">PP</option>
 </select>
-</div>
 
-{material!=="PE_RC"&&(
-<div>
-Color<br/>
-<select value={color} onChange={e=>setColor(e.target.value)}>
-<option value="natural">Natural</option>
-<option value="color">Color</option>
-</select>
-</div>
-)}
-
-</div>
-
-<h2>Piezas</h2>
+<p>Piezas</p>
 
 <textarea
-rows={8}
-style={{width:"100%"}}
-placeholder="2-2500x1200x20"
+style={{width:"100%",height:120}}
+placeholder={`Ejemplo
+
+2-820x820x120
+2-760x760x120
+2-520x520x120`}
 value={input}
 onChange={e=>setInput(e.target.value)}
 />
 
 <br/><br/>
 
-<button onClick={calculate}>Optimizar</button>
+<button onClick={calculate}>
+Optimizar
+</button>
 
-{result&&(
+{result && (
 
 <div style={{marginTop:40}}>
 
 <h2>Resultado</h2>
 
-<p><b>Placa usada:</b> {result.board.w} x {result.board.h}</p>
+<p><b>Placa elegida:</b> {result.board.w} × {result.board.h}</p>
 
-<p><b>Peso piezas:</b> {result.piecesWeight.toFixed(2)} kg</p>
+<p><b>Placas necesarias:</b> {result.boardsNeeded}</p>
 
-<p><b>Peso placa:</b> {result.boardWeight.toFixed(2)} kg</p>
+<p><b>Peso piezas:</b> {result.piecesWeightTotal.toFixed(2)} kg</p>
+
+<p><b>Peso placas usadas:</b> {result.totalBoardWeight.toFixed(2)} kg</p>
+
+<p><b>Desperdicio:</b> {result.wasteWeight.toFixed(2)} kg ({result.wastePercent.toFixed(2)}%)</p>
 
 <p><b>Coste material:</b> {result.materialCost.toFixed(2)} €</p>
 
 <p><b>Coste corte:</b> {result.cutCost.toFixed(2)} €</p>
 
-<p><b>Coste total:</b> {result.totalCost.toFixed(2)} €</p>
+<p><b>Coste fabricación:</b> {result.totalCost.toFixed(2)} €</p>
 
-<p><b>Precio medio piezas:</b> {result.priceKgPieces.toFixed(2)} €/kg</p>
+<p><b>Coste fabricación:</b> {result.priceKgPieces.toFixed(2)} €/kg</p>
 
 </div>
 
@@ -251,5 +240,6 @@ onChange={e=>setInput(e.target.value)}
 
 </div>
 
-);
+)
+
 }
