@@ -9,6 +9,8 @@ const BOARDS = [
 { w:2020, h:1020 }
 ]
 
+const KERF = 5
+
 const MATERIAL_PRICE:any = {
 PE_RC:{
 20:1.7,
@@ -83,6 +85,20 @@ pieces.push({w,h,t})
 return pieces
 }
 
+function piecesFromStrips(board:any,piece:any){
+
+const strips=Math.floor((board.h+KERF)/(piece.h+KERF))
+
+const piecesPerStrip=Math.floor((board.w+KERF)/(piece.w+KERF))
+
+return {
+strips,
+piecesPerStrip,
+piecesPerBoard:strips*piecesPerStrip
+}
+
+}
+
 export default function Home(){
 
 const [input,setInput]=useState("")
@@ -96,11 +112,13 @@ const pieces=parsePieces(input)
 if(pieces.length===0)return
 
 const thickness=pieces[0].t
+
 const piece=pieces[0]
 
 const totalPieces=pieces.length
 
 const pieceArea=piece.w*piece.h
+
 const pieceWeight=weight(piece.w,piece.h,thickness)
 
 const piecesWeightTotal=pieceWeight*totalPieces
@@ -111,24 +129,39 @@ BOARDS.forEach(board=>{
 
 const boardArea=board.w*board.h
 
-const fit1=Math.floor(board.w/piece.w)*Math.floor(board.h/piece.h)
-const fit2=Math.floor(board.w/piece.h)*Math.floor(board.h/piece.w)
+const fit1=piecesFromStrips(board,piece)
 
-const piecesPerBoard=Math.max(fit1,fit2)
+const rotated={w:piece.h,h:piece.w}
+
+const fit2=piecesFromStrips(board,rotated)
+
+const bestFit=fit1.piecesPerBoard>fit2.piecesPerBoard?fit1:fit2
+
+const piecesPerBoard=bestFit.piecesPerBoard
 
 if(piecesPerBoard===0)return
 
-const usedArea=piecesPerBoard*pieceArea
-
-const wasteArea=boardArea-usedArea
-
-const wastePercent=(wasteArea/boardArea)*100
-
 const boardsNeeded=Math.ceil(totalPieces/piecesPerBoard)
+
+const piecesLastBoard=totalPieces-(boardsNeeded-1)*piecesPerBoard
+
+const usedAreaFull=(boardsNeeded-1)*piecesPerBoard*pieceArea
+
+const usedAreaLast=piecesLastBoard*pieceArea
+
+const usedAreaTotal=usedAreaFull+usedAreaLast
+
+const totalBoardArea=boardsNeeded*boardArea
+
+const wasteArea=totalBoardArea-usedAreaTotal
+
+const wastePercent=(wasteArea/totalBoardArea)*100
 
 const boardWeight=weight(board.w,board.h,thickness)
 
 const totalBoardWeight=boardWeight*boardsNeeded
+
+const wasteWeight=totalBoardWeight-piecesWeightTotal
 
 let priceKg=1.7
 
@@ -146,7 +179,11 @@ const totalCost=materialCost+cutCost
 
 const priceKgPieces=totalCost/piecesWeightTotal
 
-const wasteWeight=totalBoardWeight-piecesWeightTotal
+const usedWidth=bestFit.strips*piece.h+(bestFit.strips-1)*KERF
+
+const scrapWidth=board.h-usedWidth
+
+const scrapHeight=board.w
 
 const resultTemp={
 
@@ -160,13 +197,15 @@ totalBoardWeight,
 materialCost,
 cutCost,
 totalCost,
-priceKgPieces
+priceKgPieces,
+scrapWidth,
+scrapHeight
 
 }
 
 if(!best ||
-resultTemp.wastePercent < best.wastePercent ||
-(resultTemp.wastePercent === best.wastePercent && resultTemp.materialCost < best.materialCost)
+resultTemp.wastePercent<best.wastePercent ||
+(resultTemp.wastePercent===best.wastePercent && resultTemp.materialCost<best.materialCost)
 ){
 best=resultTemp
 }
@@ -181,7 +220,7 @@ return(
 
 <div style={{padding:40,fontFamily:"Arial"}}>
 
-<h1>Optimizador Corte Vapla JT v1</h1>
+<h1>Optimizador Corte Vapla JT</h1>
 
 <h2>Configuración</h2>
 
@@ -197,9 +236,7 @@ return(
 style={{width:"100%",height:120}}
 placeholder={`Ejemplo
 
-2-820x820x120
-2-760x760x120
-2-520x520x120`}
+100-600x600x60`}
 value={input}
 onChange={e=>setInput(e.target.value)}
 />
@@ -225,6 +262,8 @@ Optimizar
 <p><b>Peso placas usadas:</b> {result.totalBoardWeight.toFixed(2)} kg</p>
 
 <p><b>Desperdicio:</b> {result.wasteWeight.toFixed(2)} kg ({result.wastePercent.toFixed(2)}%)</p>
+
+<p><b>Recorte principal:</b> {result.scrapWidth.toFixed(0)} × {result.scrapHeight.toFixed(0)} mm</p>
 
 <p><b>Coste material:</b> {result.materialCost.toFixed(2)} €</p>
 
