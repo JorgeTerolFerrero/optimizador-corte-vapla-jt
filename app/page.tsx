@@ -71,7 +71,78 @@ function calculate(){
 
   const thickness=pieces[0].t;
 
-  const board=BOARDS[0];
+  function calculate(){
+
+const pieces=parsePieces(input);
+if(pieces.length===0)return;
+
+const thickness=pieces[0].t;
+
+let piecesArea=0;
+let piecesWeight=0;
+
+pieces.forEach(p=>{
+  piecesArea+=p.w*p.h;
+  piecesWeight+=weight(p.w,p.h,p.t);
+});
+
+let best=null;
+
+BOARDS.forEach(board=>{
+
+  const boardArea=board.w*board.h;
+
+  const piece=pieces[0];
+
+  const fit1=Math.floor(board.w/piece.w)*Math.floor(board.h/piece.h);
+  const fit2=Math.floor(board.w/piece.h)*Math.floor(board.h/piece.w);
+
+  const piecesPerBoard=Math.max(fit1,fit2);
+
+  if(piecesPerBoard===0)return;
+
+  const boardsNeeded=Math.ceil(pieces.length/piecesPerBoard);
+
+  const totalBoardArea=boardsNeeded*boardArea;
+
+  const wasteArea=totalBoardArea-piecesArea;
+
+  const wastePercent=(wasteArea/totalBoardArea)*100;
+
+  const boardWeight=weight(board.w,board.h,thickness);
+
+  const priceKg=MATERIAL_PRICE.PE_RC[thickness]||1.7;
+
+  const materialCost=boardWeight*boardsNeeded*priceKg;
+
+  const cutLength=board.h*2+board.w;
+  const cutCost=(cutLength/10)*(CUT_COST[thickness]||0)*boardsNeeded;
+
+  const totalCost=materialCost+cutCost;
+
+  const priceKgPieces=totalCost/piecesWeight;
+
+  const result={
+    board,
+    boardsNeeded,
+    wastePercent,
+    materialCost,
+    cutCost,
+    totalCost,
+    priceKgPieces,
+    piecesWeight,
+    boardWeight
+  };
+
+  if(!best||result.wastePercent<best.wastePercent){
+    best=result;
+  }
+
+});
+
+setResult(best);
+
+}
 
   let piecesWeight=0;
 
